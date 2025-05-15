@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Prayer Times</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .loader {
+      border: 6px solid #d1fae5;
+      border-top: 6px solid #10b981;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-green-50 text-gray-800 font-sans">
+
+  <!-- Navbar -->
+  <header class="bg-green-800 text-white py-5 shadow-md">
+    <div class="max-w-5xl mx-auto flex justify-between items-center px-4">
+      <h1 class="text-2xl font-bold">🕌 Prayer Times</h1>
+      <nav class="space-x-4">
+        <a href="index.html" class="hover:text-yellow-300 font-semibold underline">Today</a>
+        <a href="weekly.html" class="hover:text-yellow-300">Weekly</a>
+        <a href="settings.html" class="hover:text-yellow-300">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="max-w-3xl mx-auto px-4 py-10 text-center">
+    <div id="location" class="text-xl font-semibold text-green-700 mb-2"></div>
+    <div id="hijriDate" class="text-gray-600 mb-6 italic"></div>
+    <div id="nextPrayer" class="text-xl font-bold text-green-800 mb-2"></div>
+    <div id="countdown" class="text-lg text-gray-700 mb-6"></div>
+
+    <div id="loading" class="loader"></div>
+    <div id="prayerTimes" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 hidden"></div>
+
+    <div class="bg-white mt-10 p-4 rounded shadow text-left">
+      <h3 class="text-lg font-semibold text-green-800 mb-2">📖 Daily Hadith</h3>
+      <p id="hadith" class="text-gray-700 italic">Loading hadith...</p>
+    </div>
+
+    <div id="error" class="text-red-600 mt-8 font-semibold"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-green-800 text-white text-center py-4">
+    &copy; 2025 Islamic Portal
+  </footer>
+
+  <!-- Script -->
+  <script>
+    const locationDiv = document.getElementById('location');
+    const hijriDateDiv = document.getElementById('hijriDate');
+    const prayerTimesDiv = document.getElementById('prayerTimes');
+    const nextPrayerDiv = document.getElementById('nextPrayer');
+    const countdownDiv = document.getElementById('countdown');
+    const loading = document.getElementById('loading');
+    const hadithEl = document.getElementById('hadith');
+    const errorDiv = document.getElementById('error');
+
+    const hadithList = [
+      "Pray as you have seen me praying. – Prophet Muhammad ﷺ",
+      "The closest a servant is to his Lord is while prostrating. – Muslim",
+      "Establish prayer. Indeed, prayer prevents immorality. – Quran 29:45",
+    ];
+
+    function showRandomHadith() {
+      const random = Math.floor(Math.random() * hadithList.length);
+      hadithEl.textContent = hadithList[random];
+    }
+
+    function getPrayerTimes(lat, long) {
+      const api = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${long}&method=2`;
+
+      fetch(api)
+        .then(res => res.json())
+        .then(data => {
+          const times = data.data.timings;
+          const date = data.data.date.readable;
+          const hijri = data.data.date.hijri.date;
+          hijriDateDiv.textContent = `Hijri: ${hijri}`;
+          locationDiv.textContent = `📍 ${data.data.meta.timezone} — ${date}`;
+
+          const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+          prayerTimesDiv.innerHTML = '';
+          prayers.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded shadow p-4';
+            card.innerHTML = `<h4 class="font-bold text-green-700">${p}</h4><p class="text-xl">${times[p]}</p>`;
+            prayerTimesDiv.appendChild(card);
+          });
+
+          loading.style.display = 'none';
+          prayerTimesDiv.classList.remove('hidden');
+          countdownToNextPrayer(prayers, times);
+        })
+        .catch(() => {
+          errorDiv.textContent = "⚠️ Could not load prayer times.";
+          loading.style.display = 'none';
+        });
+    }
+
+    function countdownToNextPrayer(prayers, times) {
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      let found = false;
+
+      for (let i = 0; i < prayers.length; i++) {
+        const [h, m] = times[prayers[i]].split(':').map(Number);
+        const time = new Date(`${today}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`);
+        if (time > now) {
+          updateCountdown(time, prayers[i]);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        const [h, m] = times[prayers[0]].split(':').map(Number);
+        const time = new Date(`${today}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`);
+        time.setDate(time.getDate() + 1);
+        updateCountdown(time, prayers[0]);
+      }
+    }
+
+    function updateCountdown(target, prayerName) {
+      nextPrayerDiv.textContent = `Next Prayer: ${prayerName}`;
+
+      function update() {
+        const now = new Date();
+        const diff = target - now;
+        if (diff < 0) return;
+
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        countdownDiv.textContent = `${h}h ${m}m ${s}s`;
+      }
+
+      update();
+      setInterval(update, 1000);
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => getPrayerTimes(pos.coords.latitude, pos.coords.longitude),
+          () => {
+            errorDiv.textContent = "⚠️ Please allow location access.";
+            loading.style.display = 'none';
+          }
+        );
+      } else {
+        errorDiv.textContent = "⚠️ Geolocation not supported.";
+        loading.style.display = 'none';
+      }
+    }
+
+    showRandomHadith();
+    getLocation();
+  </script>
+</body>
+</html>

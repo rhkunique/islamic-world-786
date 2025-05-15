@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Holy Quran - Read</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+    }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 3rem;
+      font-size: 2rem;
+      text-align: center;
+    }
+    header {
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+    select {
+      padding: 1.2rem;
+      border-radius: 0.75rem;
+      border: 2px solid #475569;
+      width: 100%;
+      max-width: 600px;
+      margin: 1.5rem auto;
+      display: block;
+      font-size: 1.8rem;
+    }
+    .surah {
+      background: #1e293b;
+      margin: 2rem auto;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+      max-width: 900px;
+    }
+    .ayah {
+      margin: 1.5rem 0;
+      line-height: 2.5;
+      font-size: 2.6rem;
+    }
+    .translation {
+      display: none;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Arial&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <h1>📖 Holy Quran</h1>
+    <select id="surahSelector"></select>
+  </header>
+
+  <div id="quran"></div>
+
+  <script>
+    const quranDiv = document.getElementById('quran');
+    const surahSelector = document.getElementById('surahSelector');
+
+    let quranData = [];
+    let quranEnglish = [];
+
+    async function loadQuran() {
+      const [arabicRes, englishRes] = await Promise.all([
+        fetch('https://cdn.jsdelivr.net/npm/quran-json@3.1.2/dist/quran.json'),
+        fetch('https://cdn.jsdelivr.net/npm/quran-json@3.1.2/dist/quran_en.json')
+      ]);
+      quranData = await arabicRes.json();
+      quranEnglish = await englishRes.json();
+      populateSurahDropdown();
+      const lastRead = JSON.parse(localStorage.getItem('lastRead'));
+      if (lastRead) {
+        displayQuran([quranData[lastRead.surah]]);
+        setTimeout(() => {
+          document.getElementById(`ayah-${lastRead.surah}-${lastRead.ayah}`)?.scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+      } else {
+        displayQuran(quranData);
+      }
+    }
+
+    function populateSurahDropdown() {
+      quranData.forEach((surah, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${index + 1}. ${surah.name}`;
+        surahSelector.appendChild(option);
+      });
+    }
+
+    function displayQuran(data) {
+      quranDiv.innerHTML = '';
+      data.forEach((surah, index) => {
+        const surahEl = document.createElement('div');
+        surahEl.className = 'surah';
+
+        const surahTitle = document.createElement('h2');
+        surahTitle.textContent = `${index + 1}. ${surah.name}`;
+        surahEl.appendChild(surahTitle);
+
+        surah.verses.forEach((ayah, ayahIndex) => {
+          const ayahEl = document.createElement('div');
+          ayahEl.className = 'ayah';
+          ayahEl.id = `ayah-${index}-${ayahIndex}`;
+          ayahEl.innerHTML = `<strong>${ayah.text}</strong>`;
+          surahEl.appendChild(ayahEl);
+        });
+
+        quranDiv.appendChild(surahEl);
+      });
+    }
+
+    surahSelector.addEventListener('change', () => {
+      const index = parseInt(surahSelector.value);
+      displayQuran([quranData[index]]);
+    });
+
+    loadQuran();
+  </script>
+</body>
+</html>

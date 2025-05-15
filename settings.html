@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>⚙️ Settings - Prayer Times</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body id="body" class="bg-green-50 text-gray-800 font-sans transition-colors duration-300">
+
+  <!-- Header/Nav -->
+  <header class="bg-green-800 text-white py-5 shadow-md">
+    <div class="max-w-5xl mx-auto flex justify-between items-center px-4">
+      <h1 class="text-2xl font-bold">🕌 Prayer Times</h1>
+      <nav class="space-x-4">
+        <a href="index.html" class="hover:text-yellow-300">Today</a>
+        <a href="weekly.html" class="hover:text-yellow-300">Weekly</a>
+        <a href="settings.html" class="hover:text-yellow-300 font-semibold underline">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-3xl mx-auto px-6 py-10">
+    <h2 class="text-3xl font-bold text-green-800 mb-8 text-center">⚙️ Useful Settings</h2>
+
+    <!-- Dark Mode -->
+    <div class="flex items-center justify-between bg-white rounded-xl shadow-md p-6 mb-6">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🌙</span>
+        <span class="text-lg font-medium">Enable Dark Mode</span>
+      </div>
+      <input type="checkbox" id="darkModeToggle" class="w-6 h-6" />
+    </div>
+
+    <!-- Play Adhan Button -->
+    <div class="flex items-center justify-between bg-white rounded-xl shadow-md p-6 mb-6">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🔊</span>
+        <span class="text-lg font-medium">Play Adhan Sample</span>
+      </div>
+      <button id="playAdhan" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">▶️ Play</button>
+    </div>
+
+    <!-- Notifications -->
+    <div class="flex items-center justify-between bg-white rounded-xl shadow-md p-6 mb-6">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🔔</span>
+        <span class="text-lg font-medium">Enable Notifications</span>
+      </div>
+      <button id="notifBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Allow</button>
+    </div>
+
+    <div id="status" class="text-center text-sm text-gray-600 mt-4"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-green-800 text-white text-center py-4 mt-10">
+    &copy; 2025 Islamic Portal. Built with ❤️ for the Ummah
+  </footer>
+
+  <!-- Adhan Audio -->
+  <audio id="adhanAudio" src="https://cdn.islamic.network/adhan/mp3/adhan-mecca.mp3"></audio>
+
+  <!-- Script -->
+  <script>
+    const body = document.getElementById('body');
+    const darkToggle = document.getElementById('darkModeToggle');
+    const playAdhan = document.getElementById('playAdhan');
+    const notifBtn = document.getElementById('notifBtn');
+    const status = document.getElementById('status');
+    const adhanAudio = document.getElementById('adhanAudio');
+
+    // Load saved settings
+    const saved = JSON.parse(localStorage.getItem("prayerSettings")) || {};
+    darkToggle.checked = saved.darkMode || false;
+    applyDarkMode(darkToggle.checked);
+
+    // Dark mode toggle
+    darkToggle.addEventListener("change", () => {
+      const enabled = darkToggle.checked;
+      applyDarkMode(enabled);
+      saveSettings({ darkMode: enabled });
+    });
+
+    // Apply dark mode
+    function applyDarkMode(enabled) {
+      if (enabled) {
+        body.classList.remove("bg-green-50", "text-gray-800");
+        body.classList.add("bg-gray-900", "text-gray-100");
+      } else {
+        body.classList.remove("bg-gray-900", "text-gray-100");
+        body.classList.add("bg-green-50", "text-gray-800");
+      }
+    }
+
+    // Save to localStorage
+    function saveSettings(settings) {
+      const existing = JSON.parse(localStorage.getItem("prayerSettings")) || {};
+      localStorage.setItem("prayerSettings", JSON.stringify({ ...existing, ...settings }));
+    }
+
+    // Play adhan sample
+    playAdhan.addEventListener("click", () => {
+      adhanAudio.play();
+    });
+
+    // Notification permission
+    notifBtn.addEventListener("click", () => {
+      if (!("Notification" in window)) {
+        status.textContent = "❌ Your browser does not support notifications.";
+        return;
+      }
+
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification("🔔 Notifications Enabled", {
+            body: "You’ll get prayer alerts soon insha’Allah!",
+          });
+          status.textContent = "✅ Notifications enabled.";
+          saveSettings({ notifications: true });
+        } else {
+          status.textContent = "❌ Notifications denied.";
+          saveSettings({ notifications: false });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
